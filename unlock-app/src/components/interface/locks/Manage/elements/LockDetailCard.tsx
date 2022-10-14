@@ -1,12 +1,12 @@
 import { addressMinify } from '~/utils/strings'
 import { BiCopy as CopyIcon } from 'react-icons/bi'
 import { HiOutlineExternalLink as ExternalLinkIcon } from 'react-icons/hi'
-import { Button } from '@unlock-protocol/ui'
+import { Button, Tooltip } from '@unlock-protocol/ui'
 import useClipboard from 'react-use-clipboard'
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { ToastHelper } from '~/components/helpers/toast.helper'
 import { useWeb3Service } from '~/utils/withWeb3Service'
-import { useQuery } from 'react-query'
+import { useQuery } from '@tanstack/react-query'
 import { UNLIMITED_KEYS_COUNT, UNLIMITED_KEYS_DURATION } from '~/constants'
 import { useConfig } from '~/utils/withConfig'
 import { LockIcon } from './LockIcon'
@@ -17,6 +17,8 @@ import { CardPayment } from './CardPayment'
 import { UpdateDurationModal } from '../modals/UpdateDurationModal'
 import { UpdatePriceModal } from '../modals/UpdatePriceModal'
 import { UpdateQuantityModal } from '../modals/UpdateQuantityModal'
+import { EnableRecurring } from './EnableRecurring'
+import { useLockManager } from '~/hooks/useLockManager'
 
 interface LockDetailCardProps {
   network: number
@@ -36,6 +38,7 @@ interface LockInfoCardProps {
   lockAddress: string
   network: number
   loading?: boolean
+  version?: string
 }
 
 interface EditButtonProps {
@@ -80,6 +83,7 @@ const LockInfoCard = ({
   lockAddress,
   network,
   loading,
+  version,
 }: LockInfoCardProps) => {
   const { networks } = useConfig()
   const [isCopied, setCopied] = useClipboard(lockAddress, {
@@ -100,7 +104,19 @@ const LockInfoCard = ({
   return (
     <>
       <span className="text-4xl font-bold text-black">{name}</span>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5">
+        <div>
+          <Tooltip
+            tip={`Lock version ${version}`}
+            label={`Lock version ${version}`}
+            side="bottom"
+          >
+            <span className="font-medium rounded-full px-2.5 py-1 inline-flex items-center gap-2 text-xs bg-ui-main-50 text-brand-ui-primary">
+              v.{version}
+            </span>
+          </Tooltip>
+        </div>
+
         <span className="text-base">{addressMinify(lockAddress)}</span>
         <Button
           variant="transparent"
@@ -135,6 +151,10 @@ export const LockDetailCard = ({
   const { networks } = useConfig()
   const web3Service = useWeb3Service()
 
+  const { isManager } = useLockManager({
+    lockAddress,
+    network,
+  })
   const getLock = async () => {
     return web3Service.getLock(lockAddress, network)
   }
@@ -212,6 +232,7 @@ export const LockDetailCard = ({
             network={network}
             name={lock?.name}
             loading={loading}
+            version={lock?.publicLockVersion}
           />
           <div className="flex flex-col mt-14">
             <Detail label="Network" value={networkName} loading={loading} />
@@ -219,25 +240,42 @@ export const LockDetailCard = ({
               label="Key Duration"
               value={duration}
               loading={loading}
-              append={<EditButton onClick={() => setEditDuration(true)} />}
+              append={
+                isManager && (
+                  <EditButton onClick={() => setEditDuration(true)} />
+                )
+              }
             />
             <Detail
               label="Key Quantity"
               value={numbersOfKeys}
               loading={loading}
-              append={<EditButton onClick={() => setEditQuantity(true)} />}
+              append={
+                isManager && (
+                  <EditButton onClick={() => setEditQuantity(true)} />
+                )
+              }
             />
             <Detail
               label="Price"
               value={priceLabel}
               prepend={<CryptoIcon symbol={symbol} size={22} />}
               loading={loading}
-              append={<EditButton onClick={() => setEditPrice(true)} />}
+              append={
+                isManager && <EditButton onClick={() => setEditPrice(true)} />
+              }
             />
           </div>
-          <div className="mt-6">
-            <CardPayment lockAddress={lockAddress} network={network} />
-          </div>
+          {isManager && (
+            <>
+              <div className="mt-6">
+                <EnableRecurring lockAddress={lockAddress} network={network} />
+              </div>
+              <div className="mt-6">
+                <CardPayment lockAddress={lockAddress} network={network} />
+              </div>
+            </>
+          )}
         </div>
       </div>
     </>

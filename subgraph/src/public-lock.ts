@@ -2,7 +2,8 @@ import { Address, BigInt, log } from '@graphprotocol/graph-ts'
 
 import {
   CancelKey as CancelKeyEvent,
-  ExpirationChanged as ExpirationChangedEvent,
+  ExpirationChanged as ExpirationChangedUntilV11Event,
+  ExpirationChanged1 as ExpirationChangedEvent,
   ExpireKey as ExpireKeyEvent,
   KeyExtended as KeyExtendedEvent,
   KeyManagerChanged as KeyManagerChangedEvent,
@@ -34,6 +35,13 @@ function newKey(event: TransferEvent): void {
     event.params.to
   )
   key.save()
+
+  // update lock
+  const lock = Lock.load(event.address.toHexString())
+  if (lock) {
+    lock.totalKeys = lock.totalKeys.plus(BigInt.fromI32(1))
+    lock.save()
+  }
 }
 
 export function handleTransfer(event: TransferEvent): void {
@@ -41,6 +49,13 @@ export function handleTransfer(event: TransferEvent): void {
   if (event.params.from.toHex() == zeroAddress) {
     // create key
     newKey(event)
+  } else if (event.params.to.toHex() == zeroAddress) {
+    // burn key
+    const lock = Lock.load(event.address.toHexString())
+    if (lock) {
+      lock.totalKeys = lock.totalKeys.minus(BigInt.fromI32(1))
+      lock.save()
+    }
   } else {
     // existing key has been transferred
     const keyID = genKeyID(event.address, event.params.tokenId.toString())
@@ -70,13 +85,27 @@ export function handleExpireKey(event: ExpireKeyEvent): void {
   }
 }
 
-export function handleExpirationChanged(event: ExpirationChangedEvent): void {
+export function handleExpirationChangedUntilV11(
+  event: ExpirationChangedUntilV11Event
+): void {
   const keyID = genKeyID(event.address, event.params._tokenId.toString())
   const key = Key.load(keyID)
   if (key) {
     key.expiration = getKeyExpirationTimestampFor(
       event.address,
       event.params._tokenId,
+      Address.fromBytes(key.owner)
+    )
+    key.save()
+  }
+}
+export function handleExpirationChanged(event: ExpirationChangedEvent): void {
+  const keyID = genKeyID(event.address, event.params.tokenId.toString())
+  const key = Key.load(keyID)
+  if (key) {
+    key.expiration = getKeyExpirationTimestampFor(
+      event.address,
+      event.params.tokenId,
       Address.fromBytes(key.owner)
     )
     key.save()

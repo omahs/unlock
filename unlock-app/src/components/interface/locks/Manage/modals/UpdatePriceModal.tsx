@@ -5,10 +5,11 @@ import { Token } from '@unlock-protocol/types'
 import { ToastHelper } from '~/components/helpers/toast.helper'
 import { useWalletService } from '~/utils/withWalletService'
 import { useWeb3Service } from '~/utils/withWeb3Service'
-import { useMutation, useQuery } from 'react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { SelectCurrencyModal } from '../../Create/modals/SelectCurrencyModal'
 import { lockTickerSymbol } from '~/utils/checkoutLockUtils'
 import { useConfig } from '~/utils/withConfig'
+import { CryptoIcon } from '../../elements/KeyPrice'
 
 interface EditFormProps {
   keyPrice?: string
@@ -49,7 +50,6 @@ export const UpdatePriceModal = ({
   const {
     register,
     handleSubmit,
-    getValues,
     setValue,
     reset,
     formState: { isValid, errors },
@@ -76,9 +76,10 @@ export const UpdatePriceModal = ({
     getLock()
   )
 
-  const updatePrice = async (): Promise<any> => {
-    const { keyPrice = '', currencyContractAddress } = getValues()
-
+  const updatePrice = async ({
+    keyPrice = '',
+    currencyContractAddress,
+  }: EditFormProps): Promise<any> => {
     const erc20Address =
       currencyContractAddress || lock?.currencyContractAddress || 0
 
@@ -93,9 +94,9 @@ export const UpdatePriceModal = ({
 
   const updatePriceMutation = useMutation(updatePrice)
 
-  const onHandleSubmit = async () => {
+  const onHandleSubmit = async (fields: EditFormProps) => {
     if (isValid) {
-      await ToastHelper.promise(updatePriceMutation.mutateAsync(), {
+      await ToastHelper.promise(updatePriceMutation.mutateAsync(fields), {
         loading: 'Updating price...',
         success: 'Price updated',
         error: 'There is some unexpected issue, please try again',
@@ -162,23 +163,39 @@ export const UpdatePriceModal = ({
                 }}
               />
             </div>
-            <div className="relative">
-              <Input
-                type="numeric"
-                autoComplete="off"
-                placeholder="0.00"
-                step={0.01}
-                disabled={isFree}
-                {...register('keyPrice', {
-                  required: !isFree,
-                  min: 0,
-                })}
-              />
-              {errors?.keyPrice && (
-                <span className="absolute -mt-1 text-xs text-red-700">
-                  Please enter a positive number
-                </span>
-              )}
+
+            <div className="grid grid-cols-2 gap-2 justify-items-stretch">
+              <div className="flex flex-col gap-1.5">
+                <div
+                  onClick={() => {
+                    setChangeCurrencyModal(true)
+                  }}
+                  className="box-border flex items-center flex-1 w-full gap-2 pl-4 text-base text-left transition-all border border-gray-400 rounded-lg shadow-sm cursor-pointer hover:border-gray-500 focus:ring-gray-500 focus:border-gray-500 focus:outline-none"
+                >
+                  <CryptoIcon symbol={symbol} />
+                  <span>{symbol}</span>
+                </div>
+                <div className="pl-1"></div>
+              </div>
+
+              <div className="relative">
+                <Input
+                  type="numeric"
+                  autoComplete="off"
+                  placeholder="0.00"
+                  step={0.01}
+                  disabled={isFree}
+                  {...register('keyPrice', {
+                    required: !isFree,
+                    min: 0,
+                  })}
+                />
+                {errors?.keyPrice && (
+                  <span className="absolute -mt-1 text-xs text-red-700">
+                    Please enter a positive number
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 

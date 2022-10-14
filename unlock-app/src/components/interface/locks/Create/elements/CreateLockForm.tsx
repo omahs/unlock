@@ -9,7 +9,7 @@ import { BalanceWarning } from './BalanceWarning'
 import { useConfig } from '~/utils/withConfig'
 import { lockTickerSymbol } from '~/utils/checkoutLockUtils'
 import { CryptoIcon } from '../../elements/KeyPrice'
-import { useQuery } from 'react-query'
+import { useQuery } from '@tanstack/react-query'
 import useAccount from '~/hooks/useAccount'
 
 export interface LockFormProps {
@@ -84,7 +84,6 @@ export const CreateLockForm = ({
   }, [defaultValues, reset])
 
   const onHandleSubmit = (values: LockFormProps) => {
-    console.table(values)
     if (isValid) {
       if (typeof onSubmit === 'function') {
         onSubmit(values)
@@ -122,6 +121,7 @@ export const CreateLockForm = ({
   const onChangeNetwork = (network: number | string) => {
     changeNetwork(networks[parseInt(`${network}`)])
     setSelectedToken(null)
+    setValue('network', parseInt(`${network}`))
   }
 
   return (
@@ -144,7 +144,7 @@ export const CreateLockForm = ({
           >
             <Select
               label="Network:"
-              defaultValue={networks[network!].id}
+              defaultValue={network}
               options={networkOptions}
               onChange={onChangeNetwork}
             />
@@ -175,7 +175,12 @@ export const CreateLockForm = ({
                   enabled={unlimitedDuration}
                   setEnabled={setUnlimitedDuration}
                   onChange={(enable: boolean) => {
-                    setValue('unlimitedDuration', enable)
+                    if (enable) {
+                      setValue('expirationDuration', undefined)
+                    }
+                    setValue('unlimitedDuration', enable, {
+                      shouldValidate: true,
+                    })
                   }}
                 />
               </div>
@@ -210,7 +215,12 @@ export const CreateLockForm = ({
                   enabled={unlimitedQuantity}
                   setEnabled={setUnlimitedQuantity}
                   onChange={(enable: boolean) => {
-                    setValue('unlimitedQuantity', enable)
+                    if (enable) {
+                      setValue('maxNumberOfKeys', undefined)
+                    }
+                    setValue('unlimitedQuantity', enable, {
+                      shouldValidate: true,
+                    })
                   }}
                 />
               </div>
@@ -244,8 +254,10 @@ export const CreateLockForm = ({
                   enabled={isFree}
                   setEnabled={setIsFree}
                   onChange={(enable: boolean) => {
-                    setValue('isFree', enable)
                     setValue('keyPrice', enable ? 0 : undefined)
+                    setValue('isFree', enable, {
+                      shouldValidate: true,
+                    })
                   }}
                 />
               </div>

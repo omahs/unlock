@@ -1,12 +1,13 @@
 import { Button } from '@unlock-protocol/ui'
 import React, { useState } from 'react'
-import { useMutation, useQueries } from 'react-query'
+import { useMutation, useQueries } from '@tanstack/react-query'
 import { ToastHelper } from '~/components/helpers/toast.helper'
 import { useConfig } from '~/utils/withConfig'
 import { useWalletService } from '~/utils/withWalletService'
 import { useWeb3Service } from '~/utils/withWeb3Service'
 import { CryptoIcon } from '../../elements/KeyPrice'
 import { VscGraphLine as GraphIcon } from 'react-icons/vsc'
+import { useLockManager } from '~/hooks/useLockManager'
 
 interface Action {
   title: string
@@ -89,6 +90,11 @@ export const TotalBar = ({ lockAddress, network }: TotalsProps) => {
   const walletService = useWalletService()
   const { networks } = useConfig()
 
+  const { isManager } = useLockManager({
+    lockAddress,
+    network,
+  })
+
   const { baseCurrencySymbol } = networks[network] ?? {}
 
   const getNumberOfOwners = async () => {
@@ -110,21 +116,23 @@ export const TotalBar = ({ lockAddress, network }: TotalsProps) => {
   const [
     { isLoading, data: lock },
     { isLoading: isLoadingTotalMembers, data: numberOfOwners },
-  ] = useQueries([
-    {
-      queryKey: ['getLock', lockAddress, network, withdrawMutation.isSuccess],
-      queryFn: getLock,
-    },
-    {
-      queryKey: [
-        'totalMembers',
-        lockAddress,
-        network,
-        withdrawMutation.isSuccess,
-      ],
-      queryFn: getNumberOfOwners,
-    },
-  ])
+  ] = useQueries({
+    queries: [
+      {
+        queryKey: ['getLock', lockAddress, network, withdrawMutation.isSuccess],
+        queryFn: getLock,
+      },
+      {
+        queryKey: [
+          'totalMembers',
+          lockAddress,
+          network,
+          withdrawMutation.isSuccess,
+        ],
+        queryFn: getNumberOfOwners,
+      },
+    ],
+  })
 
   const { balance = 0, outstandingKeys: keySold = 0 } = lock ?? {}
 
@@ -155,11 +163,15 @@ export const TotalBar = ({ lockAddress, network }: TotalsProps) => {
           value={formattedBalance}
           loading={loading}
           prepend={<CryptoIcon symbol={symbol} size={36} />}
-          action={{
-            title: 'Withdraw',
-            disabled: withdrawDisabled,
-            onClick: onWithDraw,
-          }}
+          action={
+            isManager
+              ? {
+                  title: 'Withdraw',
+                  disabled: withdrawDisabled,
+                  onClick: onWithDraw,
+                }
+              : undefined
+          }
         />
       </div>
     )

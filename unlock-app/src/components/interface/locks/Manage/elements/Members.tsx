@@ -1,4 +1,4 @@
-import { useQueries } from 'react-query'
+import { useQueries } from '@tanstack/react-query'
 import { useAuth } from '~/contexts/AuthenticationContext'
 import { useStorageService } from '~/utils/withStorageService'
 import { useWalletService } from '~/utils/withWalletService'
@@ -8,11 +8,14 @@ import { ImageBar } from './ImageBar'
 import { MemberCard } from './MemberCard'
 import { paginate } from '~/utils/pagination'
 import { PaginationBar } from './PaginationBar'
-import { useState } from 'react'
+import React from 'react'
 
 interface MembersProps {
   lockAddress: string
   network: number
+  loading: boolean
+  setPage: (page: number) => void
+  page: number
   filters?: {
     [key: string]: any
   }
@@ -37,6 +40,9 @@ const MembersPlaceholder = () => {
 export const Members = ({
   lockAddress,
   network,
+  loading: loadingFilters,
+  setPage,
+  page,
   filters = {
     query: '',
     filterKey: 'owner',
@@ -47,7 +53,6 @@ export const Members = ({
   const walletService = useWalletService()
   const web3Service = useWeb3Service()
   const storageService = useStorageService()
-  const [page, setPage] = useState(1)
 
   const getMembers = async () => {
     await storageService.loginPrompt({
@@ -70,36 +75,52 @@ export const Members = ({
   const [
     { isLoading, data: members = [] },
     { isLoading: isLoadingVersion, data: lockVersion = 0 },
-  ] = useQueries([
-    {
-      queryFn: getMembers,
-      queryKey: ['getMembers', lockAddress, network],
-      onError: () => {
-        ToastHelper.error('There is some unexpected issue, please try again')
+  ] = useQueries({
+    queries: [
+      {
+        queryFn: getMembers,
+        queryKey: ['getMembers', lockAddress, network, filters],
+        onError: () => {
+          ToastHelper.error('There is some unexpected issue, please try again')
+        },
       },
-    },
-    {
-      queryFn: getLockVersion,
-      queryKey: ['getLockVersion', lockAddress, network],
-      onError: () => {
-        ToastHelper.error('There is some unexpected issue, please try again')
+      {
+        queryFn: getLockVersion,
+        queryKey: ['getLockVersion', lockAddress, network],
+        onError: () => {
+          ToastHelper.error('There is some unexpected issue, please try again')
+        },
       },
-    },
-  ])
+    ],
+  })
 
-  const loading = isLoadingVersion || isLoading
+  const loading = isLoadingVersion || isLoading || loadingFilters
   const noItems = members?.length === 0 && !loading
+
+  const hasActiveFilter =
+    filters?.expiration !== 'active' || filters?.filterKey !== 'owner'
+  const hasSearch = filters?.query?.length > 0
 
   if (loading) {
     return <MembersPlaceholder />
   }
 
-  if (noItems) {
+  if (noItems && !hasSearch && !hasActiveFilter) {
     return (
       <ImageBar
         src="/images/illustrations/no-member.svg"
         alt="No members"
         description="There is no member yet, but keep it up."
+      />
+    )
+  }
+
+  if (noItems && (hasSearch || hasActiveFilter)) {
+    return (
+      <ImageBar
+        src="/images/illustrations/no-member.svg"
+        alt="No results"
+        description="No key matches your filter."
       />
     )
   }

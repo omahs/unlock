@@ -5,7 +5,7 @@ import { FiExternalLink as ExternalLinkIcon } from 'react-icons/fi'
 import Link from 'next/link'
 import { useEffect } from 'react'
 import { useWeb3Service } from '~/utils/withWeb3Service'
-import { useQuery } from 'react-query'
+import { useQuery } from '@tanstack/react-query'
 import { useRouter } from 'next/router'
 import { KeyPrice } from '../../elements/KeyPrice'
 import Lottie from 'lottie-react'
@@ -113,21 +113,21 @@ export const CreateLockFormSummary = ({
     return await web3Service.getTransaction(hash, defaultNetwork)
   }
 
-  const { data: { confirmations = 0 } = {}, isError } = useQuery(
+  const { data, isError } = useQuery(
     ['getTransactionDetails'],
     () => {
-      if (transactionHash) {
-        return getTransactionDetails(transactionHash!)
-      }
+      return getTransactionDetails(transactionHash!)
     },
     {
       refetchInterval: 5000,
     }
   )
 
-  const isDeployed = confirmations >= requiredConfirmations && !isError
+  const hasError = isError && data
+  const isDeployed =
+    (data?.confirmations || 0) >= requiredConfirmations && !isError
 
-  const currentStatus: DeployStatus = isError
+  const currentStatus: DeployStatus = hasError
     ? 'txError'
     : isDeployed
     ? 'deployed'
@@ -141,7 +141,7 @@ export const CreateLockFormSummary = ({
     // redirect to dashboard after the key is deployed
     if (isDeployed) {
       setTimeout(() => {
-        router.push('/dashboard')
+        router.push('/locks')
       }, 5000)
     }
   }, [isDeployed, router])
@@ -216,7 +216,7 @@ export const CreateLockFormSummary = ({
         <div className="flex flex-col items-center my-12 text-center">
           <h3 className="block mb-4 text-2xl font-bold md:text-4xl">{title}</h3>
           <span className="mb-4 font-base">{description}</span>
-          <Link href={'/dashboard'}>
+          <Link href={'/locks'}>
             <Button className="w-full max-w-lg" variant="outlined-primary">
               {backText}
             </Button>

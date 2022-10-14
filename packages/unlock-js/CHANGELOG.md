@@ -1,5 +1,22 @@
 # Changes
 
+# 0.30.0
+
+- Add subgraph service
+
+# 0.29.3
+
+- Breaking change in the locksmith service configuration export
+
+# 0.28.3
+
+- Add support for locksmith service.
+
+# 0.28.2
+
+- add support for `transferFeeBasisPoints`
+- move `getCancelAndRefundValueFor` from `walletService` -> `web3Service`
+
 # 0.28.1
 
 - Preserving gas calculation when previous configured on purchase

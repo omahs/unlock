@@ -139,7 +139,7 @@ interface KeyGetProps {
 export class keysByQuery extends GraphQLDataSource {
   constructor(public network: number) {
     super()
-    this.baseURL = networks[network].subgraphURI
+    this.baseURL = networks[network].subgraph.endpoint
   }
 
   async get({
@@ -154,7 +154,11 @@ export class keysByQuery extends GraphQLDataSource {
     try {
       const first = 1000 // max items
 
-      const expireTimestamp = parseInt(`${new Date().getTime() / 1000}`)
+      // need to query all keys ignoring expiration duration when searching by token id
+      const expireTimestamp =
+        expiration === 'all' || filterKey === 'keyId'
+          ? 0
+          : parseInt(`${new Date().getTime() / 1000}`)
       const keyId = getValidNumber(search)
 
       let query: any
